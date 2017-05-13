@@ -2,7 +2,7 @@
 
 Synopsis
 --------
-
+THis repository summarizes all the code written for my master thesis.
 
 Installation
 ------------
@@ -16,7 +16,3 @@ Describe and show how to run the tests with code examples.
 Contributors
 ------------
 Dennis Joosens
-
-License
--------
-GPLv2
