@@ -2,16 +2,18 @@
 
 Synopsis
 --------
-THis repository summarizes all the code written for my master thesis.
+This repository summarizes all the written and used code for my master thesis.
 
 Installation
 ------------
-files can be compiled with GCC
-$ gcc <file.c> -o file
+The files can be compiled with GCC.
 
-Tests
+Linux terminal:
 
-Describe and show how to run the tests with code examples.
+# gcc <file.c> -o file
+
+# ./file
+
 
 Contributors
 ------------
