@@ -10,10 +10,10 @@ The files can be compiled with GCC.
 
 Linux terminal:
 
-+```
+```
 # gcc <file.c> -o file
 # ./file
-+```
+```
 
 Contributors
 ------------
