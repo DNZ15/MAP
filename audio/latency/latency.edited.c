@@ -42,8 +42,7 @@ char *cdevice = "hw:0,0";
 snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
 int rate = 48000;
 int channels = 2;
-int buffer_size = 0;		/* auto */
-int period_size = 0;		/* auto */
+int buffer_size, period_size = 0;		/* auto, auto */
 int latency_min = 32;		/* in frames / 2 */
 int latency_max = 2048;		/* in frames / 2 */
 int loop_sec = 30;		/* seconds */
@@ -51,13 +50,10 @@ int block = 0;			/* block mode */
 int use_poll = 0;
 int resample = 1;
 unsigned long loop_limit;
-
 snd_output_t *output = NULL;
 
 /* set configuration */
-int setparams_stream(snd_pcm_t *handle,
-		     snd_pcm_hw_params_t *params,
-		     const char *id)
+int setparams_stream(snd_pcm_t *handle, snd_pcm_hw_params_t *params, const char *id)
 {
 	int err;
 	unsigned int rrate;
@@ -83,14 +79,14 @@ int setparams_stream(snd_pcm_t *handle,
 		return err;
 	}
 
-	/* set format (16S_LE) */
+	/* set format (Signed 16 bit Little Endian) */
 	err = snd_pcm_hw_params_set_format(handle, params, format);
 	if (err < 0) {
 		printf("Sample format not available for %s: %s\n", id, snd_strerror(err));
 		return err;
 	}
 
-	/* set number of channels */
+	/* set number of channels, 2 */
 	err = snd_pcm_hw_params_set_channels(handle, params, channels);
 	if (err < 0) {
 		printf("Channels count (%i) not available for %s: %s\n", channels, id, snd_strerror(err));
@@ -111,11 +107,7 @@ int setparams_stream(snd_pcm_t *handle,
 	return 0;
 }
 
-int setparams_bufsize(snd_pcm_t *handle,
-		      snd_pcm_hw_params_t *params,
-		      snd_pcm_hw_params_t *tparams,
-		      snd_pcm_uframes_t bufsize,
-		      const char *id)
+int setparams_bufsize(snd_pcm_t *handle, snd_pcm_hw_params_t *params, snd_pcm_hw_params_t *tparams, snd_pcm_uframes_t bufsize,const char *id)
 {
 	int err;
 	snd_pcm_uframes_t periodsize;
@@ -144,10 +136,7 @@ int setparams_bufsize(snd_pcm_t *handle,
 	return 0;
 }
 
-int setparams_set(snd_pcm_t *handle,
-		  snd_pcm_hw_params_t *params,
-		  snd_pcm_sw_params_t *swparams,
-		  const char *id)
+int setparams_set(snd_pcm_t *handle, snd_pcm_hw_params_t *params, snd_pcm_sw_params_t *swparams, const char *id)
 {
 	int err;
 	snd_pcm_uframes_t val;
@@ -284,7 +273,7 @@ int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
 		exit(0);
 	}
 
-	/* prepare playback device */
+	/* prepare playback device for use */
 	if ((err = snd_pcm_prepare(phandle)) < 0) {
 		printf("Prepare error: %s\n", snd_strerror(err));
 		exit(0);
@@ -297,6 +286,7 @@ int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
 	return 0;
 }
 
+// print out data
 void showstat(snd_pcm_t *handle, size_t frames)
 {
 	int err;
@@ -311,6 +301,7 @@ void showstat(snd_pcm_t *handle, size_t frames)
 	snd_pcm_status_dump(status, output);
 }
 
+// calculates the latency
 void showlatency(size_t latency)
 {
 	double d;
