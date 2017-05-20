@@ -13,18 +13,18 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+//#define BUFSIZE 5
+//#define BUFSIZE 512
 #define BUFSIZE 1024
 
 #if 0
 /* 
  * Structs exported from in.h
  */
-
 /* Internet address */
 struct in_addr {
   unsigned int s_addr; 
 };
-
 /* Internet style socket address */
 struct sockaddr_in  {
   unsigned short int sin_family; /* Address family */
@@ -32,11 +32,9 @@ struct sockaddr_in  {
   struct in_addr sin_addr;	 /* IP address */
   unsigned char sin_zero[...];   /* Pad to size of 'struct sockaddr' */
 };
-
 /*
  * Struct exported from netdb.h
  */
-
 /* Domain name service (DNS) host entry */
 struct hostent {
   char    *h_name;        /* official name of host */
@@ -68,14 +66,7 @@ int main(int argc, char **argv) {
   int optval; /* flag value for setsockopt */
   int n; /* message byte size */
 
-  /* 
-   * check command line arguments 
-   */
-  if (argc != 2) {
-    fprintf(stderr, "usage: %s <port>\n", argv[0]);
-    exit(1);
-  }
-  portno = atoi(argv[1]);
+  portno = 10000;
 
   /* 
    * socket: create the parent socket 
@@ -154,7 +145,8 @@ int main(int argc, char **argv) {
     n = read(childfd, buf, BUFSIZE);
     if (n < 0) 
       error("ERROR reading from socket");
-    printf("server received %d bytes: %s", n, buf);
+
+	printf("server received %zu/%d bytes\n", sizeof(buf), n);
     
     /* 
      * write: echo the input string back to the client 

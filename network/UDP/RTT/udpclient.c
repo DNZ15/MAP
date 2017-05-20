@@ -1,6 +1,5 @@
 /* 
  * udpclient.c - A simple UDP client
- * usage: udpclient <host> <port>
  */
 
 //Added:
@@ -16,6 +15,8 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 
+//#define BUFSIZE 5
+//#define BUFSIZE 512
 #define BUFSIZE 1024
 
 clock_t start, end;
@@ -36,17 +37,13 @@ int main(int argc, char **argv) {
     struct sockaddr_in serveraddr;
     struct hostent *server;
     char *hostname;
-    char buf[BUFSIZE];
+   // char buf[BUFSIZE];
+	unsigned char buf[BUFSIZE];
 
-    /* check command line arguments */
-    if (argc != 3) {
-       fprintf(stderr,"usage: %s <hostname> <port>\n", argv[0]);
-       exit(0);
-    }
-    hostname = argv[1];
-    portno = atoi(argv[2]);
+    hostname = "192.168.10.10";
+    portno = 10000;
 
-    /* socket: create the socket */
+    /* socket: create the socket */	
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
@@ -57,7 +54,8 @@ int main(int argc, char **argv) {
         fprintf(stderr,"ERROR, no such host as %s\n", hostname);
         exit(0);
     }
-
+	
+    
     /* build the server's Internet address */
     bzero((char *) &serveraddr, sizeof(serveraddr));
     serveraddr.sin_family = AF_INET;
@@ -65,27 +63,39 @@ int main(int argc, char **argv) {
 	  (char *)&serveraddr.sin_addr.s_addr, server->h_length);
     serveraddr.sin_port = htons(portno);
 
-    /* get a message from the user */
+	
     bzero(buf, BUFSIZE);
-    //printf("Please enter msg: ");
-    //fgets(buf, BUFSIZE, stdin);
-    strcpy(buf, "hallojlkjjdfhgkjdsfffkfsbnkjhrefkjhdffhjsdhfjsdhfjkhkjzefzeuifyezjfgkerjhfgjdshyfkrhjefjkdsgfkhsdfjhfgkjezrhcfvkezjhzkjgfejkfhzekjfhjkzegfjzehfgkjzehfgzekjfhzeiuydsjcvgsdhlkcfhdskfhsdkjfhgjsdkfhgzeuifhgzekfjhsjfgsdfhkgzkejhhfzegkjhjdfhkjezahfzkeiuydsfjhzedfkjhfzeukiysdsfdsfhedejfziuytzfeugjzefzfejzefykiuzefzfhezfejhiuysdfkfudiuyskdzhfsjdhcshvjcxcvxb,nvcxjhvcxfhgvcxgfhvcxceztbvcrfszutyzefytigzerfgefzzefuzefzfehuozfeioyzfeoyi!zfeoysfdtiudfubfdrytuyifbutijkhdfsgjhgjhfdkghfdjghdfjghdfkjghdfjghkfjhjkvhbjvhbkfjhgdkjhdtysudfguksdfgksfdfksdvbrfhfdskhjfdkuhcioydfsyiuiuzefkcjkjhfsdkjhrzeuyikrzesdfyiufezdskiuyzfgekkgfgusdkjhefzkfsduiyzfegzefkezfgtkyuzefgzfeyzspfvdusdfiyulzfekfzekjfzedkjfzedkjfdhskjfsdfjklkfjgkdfljglkdfjglkerlkgjioeupiufdyifhkjsdfldshfkjdhflkjhsdjkldshfgkjhjkfhzelkchdslkvhjkjvjdshvldkhvdkfhjlkdfjlkdfjsdkfjdskfjdslkfjdslkfjdslkfjdslkfjilfureoigyerkhlfkdhfldsfjdjshfjdkhfdkhfkdhjfsjdhfjldkhfldshjfdshfjsdhfsdjhfkjfhgufiezouofyuiytcyuxgckjxwhvkcjxgchdqs,nb,hjdehfjs,dghlkdsfhkjsdyfchfhjdsfkdshvfdshvfdjyfhsfhgk");
-    /* send the message to the server */
+
+	int i, a;
+	printf("\n Random data:\n");
+	srand(time(NULL));
+	for (i=0; i < sizeof(buf); i++) {
+		buf[i] = ((rand() % 100)+1);
+		printf("%u", buf[i]);
+	}
+
+
+   /* send the message to the server */
     serverlen = sizeof(serveraddr);
 
     start = clock();
 //    n = sendto(sockfd, buf, strlen(buf), 0, &serveraddr, serverlen);
-    n = sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr*)&serveraddr, serverlen);
+    n = sendto(sockfd, buf, sizeof(buf), 0, (struct sockaddr*)&serveraddr, serverlen);
 
     if (n < 0) 
       error("ERROR in sendto");
     
     /* print the server's reply */
 //    n = recvfrom(sockfd, buf, strlen(buf), 0, &serveraddr, &serverlen);
-    n = recvfrom(sockfd, buf, strlen(buf), 0, (struct sockaddr*)&serveraddr, &serverlen);
+    n = recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr*)&serveraddr, &serverlen);
     if (n < 0) 
       error("ERROR in recvfrom");
-    printf("\nEcho from server: %s", buf);
+	
+	printf("\nEcho from server\n");
+	for (a=0; a<sizeof(buf); a++)
+	{
+        printf("%d", buf[a]);
+	}
 
 	end = clock();
 	cpu_time_used = (((double) (end - start)) / CLOCKS_PER_SEC)*1000;

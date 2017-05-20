@@ -1,6 +1,5 @@
 /* 
  * udpserver.c - A simple UDP echo server 
- * usage: udpserver <port>
  */
 #include <sys/time.h>
 #include <time.h>
@@ -15,6 +14,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+//#define BUFSIZE 5
+//#define BUFSIZE 512
 #define BUFSIZE 1024
 
 clock_t start, end;
@@ -34,19 +35,13 @@ int main(int argc, char **argv) {
   struct sockaddr_in serveraddr; /* server's addr */
   struct sockaddr_in clientaddr; /* client addr */
   struct hostent *hostp; /* client host info */
-  char buf[BUFSIZE]; /* message buf */
+  //char buf[BUFSIZE]; /* message buf */
+  unsigned char buf[BUFSIZE];
   char *hostaddrp; /* dotted decimal host addr string */
   int optval; /* flag value for setsockopt */
   int n; /* message byte size */
 
-  /* 
-   * check command line arguments 
-   */
-  if (argc != 2) {
-    fprintf(stderr, "usage: %s <port>\n", argv[0]);
-    exit(1);
-  }
-  portno = atoi(argv[1]);
+  portno = 10000;
 
   /* 
    * socket: create the parent socket 
@@ -113,12 +108,12 @@ int main(int argc, char **argv) {
     printf("server received datagram from %s (%s)\n", 
 	   hostp->h_name, hostaddrp);
 //    printf("server received %d/%d bytes: %s\n", strlen(buf), n, buf);
-    printf("server received %zu/%d bytes: %s\n", strlen(buf), n, buf);
+    printf("server received %zu/%d bytes\n", sizeof(buf), n);
     
     /* 
      * sendto: echo the input back to the client 
      */
-    n = sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *) &clientaddr, clientlen);
+    n = sendto(sockfd, buf, sizeof(buf), 0, (struct sockaddr *) &clientaddr, clientlen);
     if (n < 0) 
       error("ERROR in sendto");
   }

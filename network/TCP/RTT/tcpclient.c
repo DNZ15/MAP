@@ -13,6 +13,8 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 
+//#define BUFSIZE 5
+//#define BUFSIZE 512
 #define BUFSIZE 1024
 
 clock_t start, end;
@@ -33,14 +35,11 @@ int main(int argc, char **argv) {
     char *hostname;
     char buf[BUFSIZE];
 
-    /* check command line arguments */
-    if (argc != 3) {
-       fprintf(stderr,"usage: %s <hostname> <port>\n", argv[0]);
-       exit(0);
-    }
-    hostname = argv[1];
-    portno = atoi(argv[2]);
 
+    hostname = "192.168.10.10";
+    portno = 10000;
+
+	
     /* socket: create the socket */
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) 
@@ -58,20 +57,25 @@ int main(int argc, char **argv) {
     serveraddr.sin_family = AF_INET;
     bcopy((char *)server->h_addr, (char *)&serveraddr.sin_addr.s_addr, server->h_length);
     serveraddr.sin_port = htons(portno);
+    
     start = clock();
-
     /* connect: create a connection with the server */
-//    if (connect(sockfd, &serveraddr, sizeof(serveraddr)) < 0) 
     if (connect(sockfd,(struct sockaddr*) &serveraddr, sizeof(serveraddr)) < 0) 
       error("ERROR connecting");
 
     /* get message line from the user */
-    //printf("Please enter msg: ");
     bzero(buf, BUFSIZE);
-    strcpy(buf, "hallojlkjjdfhkjfgjhfgdteksngfhtfhfhjfdgfdgdfgfdgdfgdfgdfgdfgtrhgrtezfzfsdfsdfsdfsdfgsdfssdfsdfsdfsdfjkhfdssfsdyhfysfghsdgfjhfgezjkyhfgzekjhfekhjfrekjfhdskfjhkjvdfjkvhdfkjfhdkjfhdsfyzeukfghyzerikfgdsfhkgsdkhfkdhflkjzgfhizelkgfzeigfkuzehvffdhgv;dfchjvlkdfjhvfkljdhfjsdhfkjsdhfkjsdhflkjdsghfliregfkuzerygfkjzehferhilfgrehyiolgvfdkjhg,jhvjfd,bvh;jxc,bvxhjcvghlisdhfglomifhezlifgzekyfhgzejhkyfhkzejgfhkzejgfhkzreifgkjuhfgdhsufydjshykfjsdhgfhkzejhgfhkizeugfkezgfzekuhfgezkjhfgzekhfgzekjhfgzejkfyhgjzehfgkjzehyfkzeyhfikuzegfhkuzegfkuezdskfsdnvbnvbrfhfdskhjfdkuhcioydfsyihfsdkjhrzeuyikrzesdfyiufezdskiuyzfgekkgfjghfdjhgjfhgkfjhgfjhgdfjhgfdjghfdjkhgfdjghfdjkghdfgjhfdgkjhgjdfhgdffhjkfsdjhkfsdkjhsdfkjhfsdkjhfsdkjhsdfjhksdfkjhsdfkjhfsdkjhfsdkjhfsdkjhsdfkjhsdfiuysdfutyidfstyiuarzejhrzeahgdsfqkrzehgfukdshfulgkhgfkhcjfdehctvezjgyckvezgjyckfyrfyjyhfhgfezhfghkjgfkjezhrkjehrilzeiruezpruzelkjfgdekfgkerjyhlreigtydskugdsbfkjsdhkjzehdsudfhjkdhksdkjhdfsgiukysdfiuysdftyiusdturfdrcgfestznb,qdf;dr;kfqj,hbntiflkjreofhizrehkjoirhreoioihfghfghgd");
-//    fgets(buf, BUFSIZE, stdin);
+
+   	int i, a;
+	printf("\n Random data:\n");
+	srand(time(NULL));
+	for (i=0; i < sizeof(buf); i++) {
+		buf[i] = ((rand() % 100)+1);
+		printf("%u", buf[i]);
+	}
+	
     /* send the message line to the server */
-    n = write(sockfd, buf, strlen(buf));
+    n = write(sockfd, buf, sizeof(buf));
     if (n < 0) 
       error("ERROR writing to socket");
 
@@ -80,7 +84,13 @@ int main(int argc, char **argv) {
     n = read(sockfd, buf, BUFSIZE);
     if (n < 0) 
       error("ERROR reading from socket");
-    printf("\nEcho from server: %s", buf);
+
+	printf("\nEcho from server\n");
+	for (a=0; a<sizeof(buf); a++)
+	{
+        printf("%d", buf[a]);
+	}
+	
     close(sockfd);
 
     end = clock();

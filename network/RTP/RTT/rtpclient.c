@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 
+//#define BUFSIZE 17
 //#define BUFSIZE 524
 #define BUFSIZE 1036
 
@@ -63,8 +64,7 @@ int main(int argc, char **argv) {
 	14 bytes Ethernet
      20 bytes IP
      8 bytes UDP  (42 bytes)
-		
-	
+			
 	First 4 octets
 	v = 2 bit
 	p = 1 bit
@@ -109,7 +109,6 @@ int main(int argc, char **argv) {
 
 	// RTT measurement calculation start
     start = clock();
-	//n = sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr*)&serveraddr, serverlen);
      n = sendto(sockfd, buf, sizeof(buf), 0, (struct sockaddr*)&serveraddr, serverlen);
     //printf("sizeof of buf %lu \n", sizeof(buf));
 
