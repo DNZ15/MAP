@@ -1,30 +1,3 @@
-/*
- *  Latency test program
- *
- *     Author: Jaroslav Kysela <perex@perex.cz>
- *
- *
- *  This small demo program can be used for measuring latency between
- *  capture and playback. This latency is measured from driver (diff when
- *  playback and capture was started). Scheduler is set to SCHED_RR.
- *
- *
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation; either version 2 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,7 +16,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define BUFSIZE 8192
+//#define BUFSIZE 8192
 clock_t start, end;
 double cpu_time_used;
 /*UDP*/
@@ -51,7 +24,7 @@ double cpu_time_used;
 char *pdevice = "hw:0,0";
 char *cdevice = "hw:0,0";
 snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
-int rate = 48000;
+int rate = 44100;
 int channels = 2;
 int latency_min = 32;		/* in frames / 2 */
 int latency_max = 2048;		/* in frames / 2 */
@@ -493,9 +466,10 @@ int main(int argc, char *argv[])
     struct hostent *server;
     char *hostname;
 	//char buf[BUFSIZE];
-    char *bufx[BUFSIZE];
+   // char *bufx[BUFSIZE];
 
-    hostname = "192.168.10.11";
+    //hostname = "192.168.10.11";
+	hostname = "192.168.10.11";
     portno = 10000;
 
     /* socket: create the socket */
@@ -519,7 +493,7 @@ int main(int argc, char *argv[])
 	
 	
 	/* writes all zeroes, empty it */
-    bzero(bufx, BUFSIZE);
+  //  bzero(bufx, BUFSIZE);
 	
 	/* send the message to the server */
 	serverlen = sizeof(serveraddr);
@@ -593,7 +567,7 @@ int main(int argc, char *argv[])
 	setscheduler();
 
 	/* list some info */
-	printf("Playback device is %s\n", pdevice);
+	//printf("Playback device is %s\n", pdevice);
 	printf("Capture device is %s\n", cdevice);
 	printf("Parameters are %iHz, %s, %i channels, %s mode\n", rate, snd_pcm_format_name(format), channels, block ? "blocking" : "non-blocking");
 	printf("Poll mode: %s\n", use_poll ? "yes" : "no");
@@ -666,7 +640,7 @@ int main(int argc, char *argv[])
 
 		ok = 1;
 		in_max = 0;
-		
+		int my_counter = 0;
 	//	start = clock();
 		while (ok && frames_in < loop_limit) {
 			if (use_poll) {
@@ -674,20 +648,34 @@ int main(int argc, char *argv[])
 				snd_pcm_wait(chandle, 1000);
 			}
 			if ((r = readbuf(chandle, buffer, latency, &frames_in, &in_max)) < 0)
-				ok = 0;
+			{
+					ok = 0;		
+			}
+			
 			else {
-					//memcpy(buf, &frames_out, 4);
-					//memcpy(buf, buffer, 4);
-					//memcpy(bufx, buffer, 4);	
-					//n = sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr*)&serveraddr, serverlen);
-                     
-					if (sendto(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&serveraddr, serverlen) < 0) 
+			      printf("\n r= %d \n",r);
+			      if (writebuf(phandle, buffer, r, &frames_out) < 0)
+				  {
+					ok = 0;
+				  }
+				  
+				  if (sendto(sockfd, buffer, r, 0, (struct sockaddr*)&serveraddr, serverlen) < 0) 
 					{
 						 error("ERROR in sendto");
 						 ok = 0;
 						 
 					}
+					my_counter = my_counter+1;
+				    printf("\nmy_counter = %d \n",my_counter);
 					printf("\nbuffer value: 0x%04X, %d", *buffer, sizeof(buffer));
+				   
+					//memcpy(buf, &frames_out, 4);
+					//memcpy(buf, buffer, 4);
+					//memcpy(bufx, buffer, 4);	
+					//n = sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr*)&serveraddr, serverlen);
+                     
+					//if (sendto(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&serveraddr, serverlen) < 0) 
+				
 					/*
 					printf("framesout (dec): %d \n", bufx);
 					printf("framesout: 0x%02X \n", bufx);

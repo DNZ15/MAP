@@ -1,32 +1,3 @@
-/*
- *  Latency test program
- *
- *     Author: Jaroslav Kysela <perex@perex.cz>
- *
- *     Author of bandpass filter sweep effect:
- *	       Maarten de Boer <mdeboer@iua.upf.es>
- *
- *  This small demo program can be used for measuring latency between
- *  capture and playback. This latency is measured from driver (diff when
- *  playback and capture was started). Scheduler is set to SCHED_RR.
- *
- *
- *   This program is free software; you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation; either version 2 of the License, or
- *   (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program; if not, write to the Free Software
- *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +23,7 @@
 char *pdevice = "hw:0,0";
 char *cdevice = "hw:0,0";
 snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
-int rate = 48000;
+int rate = 44100;
 int channels = 2;
 int buffer_size = 0;		/* auto */
 int period_size = 0;		/* auto */
@@ -66,9 +37,10 @@ unsigned long loop_limit;
 
 snd_output_t *output = NULL;
 
-#define BUFSIZE 4
+#define BUFSIZE 1024
 
-
+        snd_pcm_sframes_t frames;
+		int counter=0;
 /*
  * error - wrapper for perror
  */
@@ -387,7 +359,7 @@ long timediff(snd_timestamp_t t1, snd_timestamp_t t2)
 	}
 	return (t1.tv_sec * 1000000) + l;
 }
-
+/*
 long readbuf(snd_pcm_t *handle, char *buf, long len, size_t *frames, size_t *max)
 {
 	long r;
@@ -418,7 +390,7 @@ long readbuf(snd_pcm_t *handle, char *buf, long len, size_t *frames, size_t *max
 	}
 	// showstat(handle, 0);
 	return r;
-}
+}*/
 
 long writebuf(snd_pcm_t *handle, char *buf, long len, size_t *frames)
 {
@@ -666,10 +638,10 @@ portno = 10000;
 		}
 
 		/* start capture - and, since it's linked - playback */
-	/*	if ((err = snd_pcm_start(chandle)) < 0) {
+		if ((err = snd_pcm_start(phandle)) < 0) {
 			printf("Go error: %s\n", snd_strerror(err));
 			exit(0);
-		}*/
+		}
 
 		/* get timestamp when the devices started */
 /*		gettimestamp(phandle, &p_tstamp);
@@ -683,12 +655,12 @@ portno = 10000;
 
 		ok = 1;
 		in_max = 0;
-
+ bzero(buf, 8);
 	
 		while (ok && frames_in < loop_limit) {
 			if (use_poll) {
 				/* use poll to wait for next event */
-				snd_pcm_wait(chandle, 1000);
+				snd_pcm_wait(phandle, 1000);
 			}
 			
 			/*if ((r = readbuf(chandle, buffer, latency, &frames_in, &in_max)) < 0)*/
@@ -723,17 +695,54 @@ portno = 10000;
 			//}
 			
 			
-			    bzero(buf, 8);
+			   /*
+			
+				if((n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen)) < 0)
+				{
+					ok = 0;
+					
+					
+				}
+				
+				  printf("\n n =%d \n", n);
+	              printf("\nbuffer value: 0x%04X, %d", *buf, sizeof(buf));
 
-				n = recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr *) &clientaddr, &clientlen);
-
-				 printf("\nbuffer value: 0x%04X, %d", *buf, sizeof(buf));
 
 				if (n < 0)
 				  error("ERROR in recvfrom");
-			
-					
-			
+				*/
+				/*else
+				{
+					 if (writebuf(phandle, buf, n, &frames_out) < 0)
+					  {
+						ok = 0;
+					  }
+				  }*/
+				  
+			/*	
+		if(n = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *) &clientaddr, &clientlen)<0)
+		{
+			printf("\n n =%d \n", n);	
+		}	*/
+		
+		n = recvfrom(sockfd, buffer, 128, 0, (struct sockaddr *) &clientaddr, &clientlen);
+		//printf("\n n =%d \n", n);	
+		
+		
+	
+			   // counter = counter+1;
+				//printf("\n counter =%d \n", counter);	
+                frames = snd_pcm_writei(phandle, buffer, 128);
+                if (frames < 0)
+                        frames = snd_pcm_recover(phandle, frames, 0);
+                if (frames < 0) {
+                        printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
+                        break;
+                }
+                if (frames > 0 && frames < (long)sizeof(buffer))
+                        printf("Short write (expected %li, wrote %li)\n", (long)sizeof(buffer), frames);
+
+
 		}
 
 	
