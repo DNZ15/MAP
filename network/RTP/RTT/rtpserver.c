@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+//#define BUFSIZE 17
 //#define BUFSIZE 524
 #define BUFSIZE 1036
 
@@ -118,7 +119,7 @@ int main(int argc, char **argv) {
     /* 
      * sendto: echo the input back to the client 
      */
-    n = sendto(sockfd, buf, sizeof(buf), 0, (struct sockaddr *) &clientaddr, clientlen);
+    n = sendto(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, clientlen);
     if (n < 0) 
       error("ERROR in sendto");
   }

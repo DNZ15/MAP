@@ -642,11 +642,13 @@ int main(int argc, char *argv[])
 		in_max = 0;
 		int my_counter = 0;
 	//	start = clock();
+	start = clock();
 		while (ok && frames_in < loop_limit) {
 			if (use_poll) {
 				/* use poll to wait for next event */
 				snd_pcm_wait(chandle, 1000);
 			}
+			
 			if ((r = readbuf(chandle, buffer, latency, &frames_in, &in_max)) < 0)
 			{
 					ok = 0;		
@@ -665,9 +667,14 @@ int main(int argc, char *argv[])
 						 ok = 0;
 						 
 					}
-					my_counter = my_counter+1;
+							end = clock();
+					cpu_time_used = (((double) (end - start)) / CLOCKS_PER_SEC)*1000;
+					printf("\ncpu_time_used: %f ms \n", cpu_time_used);
+					
+					exit(0);
+					/*my_counter = my_counter+1;
 				    printf("\nmy_counter = %d \n",my_counter);
-					printf("\nbuffer value: 0x%04X, %d", *buffer, sizeof(buffer));
+					printf("\nbuffer value: 0x%04X, %d", *buffer, sizeof(buffer));*/
 				   
 					//memcpy(buf, &frames_out, 4);
 					//memcpy(buf, buffer, 4);
@@ -685,6 +692,7 @@ int main(int argc, char *argv[])
 					//ok = 0;
 			}
 		}
+
 
 		//end = clock();
 		//cpu_time_used = (((double) (end - start)) / CLOCKS_PER_SEC)*1000;

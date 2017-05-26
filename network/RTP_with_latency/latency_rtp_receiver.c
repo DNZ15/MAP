@@ -6,9 +6,11 @@
 #include <getopt.h>
 #include <alsa/asoundlib.h>
 #include <sys/time.h>
+#include <math.h>
 
-/* needed for UDP*/
+#include <sys/time.h>
 #include <time.h>
+
 #include <unistd.h>
 #include <netdb.h>
 #include <sys/types.h> 
@@ -16,9 +18,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-//#define BUFSIZE 8192
-clock_t start, end;
-double cpu_time_used;
 
 
 char *pdevice = "hw:0,0";
@@ -26,22 +25,33 @@ char *cdevice = "hw:0,0";
 snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
 int rate = 44100;
 int channels = 2;
+int buffer_size = 0;		/* auto */
+int period_size = 0;		/* auto */
 int latency_min = 32;		/* in frames / 2 */
 int latency_max = 2048;		/* in frames / 2 */
-int loop_sec = 10;		/* seconds */
-int buffer_size, period_size, block, use_poll = 0;			/* auto, auto, block mode, '' */
+int loop_sec = 30;		/* seconds */
+int block = 0;			/* block mode */
+int use_poll = 0;
 int resample = 1;
 unsigned long loop_limit;
 
 snd_output_t *output = NULL;
 
+#define BUFSIZE 1024
 
-/* 
- * error - wrapper for perror for UDP
+snd_pcm_sframes_t frames;
+int counter=0;
+
+clock_t start, end;
+double cpu_time_used;
+
+
+/*
+ * error - wrapper for perror
  */
 void error(char *msg) {
-    perror(msg);
-    exit(0);
+  perror(msg);
+  exit(1);
 }
 
 
@@ -166,7 +176,8 @@ int setparams_set(snd_pcm_t *handle, snd_pcm_hw_params_t *params, snd_pcm_sw_par
 	return 0;
 }
 
-int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
+//int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
+int setparams(snd_pcm_t *phandle, int *bufsize)
 {
 	int err, last_bufsize = *bufsize;
 	snd_pcm_hw_params_t *pt_params, *ct_params;	/* templates with rate, format and channels */
@@ -178,11 +189,11 @@ int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
 
 	/* allocate memory to store configuration */
 	snd_pcm_hw_params_alloca(&p_params);
-	snd_pcm_hw_params_alloca(&c_params);
+//	snd_pcm_hw_params_alloca(&c_params);
 	snd_pcm_hw_params_alloca(&pt_params);
-	snd_pcm_hw_params_alloca(&ct_params);
+	//snd_pcm_hw_params_alloca(&ct_params);
 	snd_pcm_sw_params_alloca(&p_swparams);
-	snd_pcm_sw_params_alloca(&c_swparams);
+	//snd_pcm_sw_params_alloca(&c_swparams);
 
 	/* set configuration for playback */
 	if ((err = setparams_stream(phandle, pt_params, "playback")) < 0) {
@@ -191,10 +202,10 @@ int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
 	}
 
 	/* set configuration for capture */
-	if ((err = setparams_stream(chandle, ct_params, "capture")) < 0) {
+	/*if ((err = setparams_stream(chandle, ct_params, "capture")) < 0) {
 		printf("Unable to set parameters for playback stream: %s\n", snd_strerror(err));
 		exit(0);
-	}
+	}*/
 
 	if (buffer_size > 0) {
 		*bufsize = buffer_size;
@@ -216,25 +227,25 @@ int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
 	if ((err = setparams_bufsize(phandle, p_params, pt_params, *bufsize, "playback")) < 0) {
 		printf("Unable to set sw parameters for playback stream: %s\n", snd_strerror(err));
 		exit(0);
-	}
+	}/*
 	if ((err = setparams_bufsize(chandle, c_params, ct_params, *bufsize, "capture")) < 0) {
 		printf("Unable to set sw parameters for playback stream: %s\n", snd_strerror(err));
 		exit(0);
-	}
+	}*/
 
 	/* check period size - increase buffer size if necessary */
 	snd_pcm_hw_params_get_period_size(p_params, &p_psize, NULL);
 	if (p_psize > (unsigned int)*bufsize)
 		*bufsize = p_psize;
-	snd_pcm_hw_params_get_period_size(c_params, &c_psize, NULL);
+	/*snd_pcm_hw_params_get_period_size(c_params, &c_psize, NULL);
 	if (c_psize > (unsigned int)*bufsize)
-		*bufsize = c_psize;
+		*bufsize = c_psize;*/
 
 	/* get times related to our buffer sizes */
-	snd_pcm_hw_params_get_period_time(p_params, &p_time, NULL);
+	/*snd_pcm_hw_params_get_period_time(p_params, &p_time, NULL);
 	snd_pcm_hw_params_get_period_time(c_params, &c_time, NULL);
 	if (p_time != c_time)
-		goto __again;
+		goto __again;*/
 
 	/* request buffersizes */
 	snd_pcm_hw_params_get_buffer_size(p_params, &p_size);
@@ -246,7 +257,7 @@ int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
 		}
 		goto __again;
 	}
-	snd_pcm_hw_params_get_buffer_size(c_params, &c_size);
+	/*snd_pcm_hw_params_get_buffer_size(c_params, &c_size);
 	if (c_psize * 2 < c_size) {
                 snd_pcm_hw_params_get_periods_min(c_params, &val, NULL);
 		if (val > 2 ) {
@@ -254,17 +265,17 @@ int setparams(snd_pcm_t *phandle, snd_pcm_t *chandle, int *bufsize)
 			exit(0);
 		}
 		goto __again;
-	}
+	}*/
 
 	if ((err = setparams_set(phandle, p_params, p_swparams, "playback")) < 0) {
 		printf("Unable to set sw parameters for playback stream: %s\n", snd_strerror(err));
 		exit(0);
 	}
 
-	if ((err = setparams_set(chandle, c_params, c_swparams, "capture")) < 0) {
+	/*if ((err = setparams_set(chandle, c_params, c_swparams, "capture")) < 0) {
 		printf("Unable to set sw parameters for playback stream: %s\n", snd_strerror(err));
 		exit(0);
-	}
+	}*/
 
 	/* prepare playback device */
 	if ((err = snd_pcm_prepare(phandle)) < 0) {
@@ -298,7 +309,7 @@ void showlatency(size_t latency)
 	double d;
 	latency *= 2;
 	d = (double)latency / (double)rate;
-	//printf("Trying latency %li frames, %.3fus, %.6fms (%.4fHz)\n", (long)latency, d * 1000000, d * 1000, (double)1 / d);
+	printf("Trying latency %li frames, %.3fus, %.6fms (%.4fHz)\n", (long)latency, d * 1000000, d * 1000, (double)1 / d);
 }
 
 void showinmax(size_t in_max)
@@ -353,7 +364,7 @@ long timediff(snd_timestamp_t t1, snd_timestamp_t t2)
 	}
 	return (t1.tv_sec * 1000000) + l;
 }
-
+/*
 long readbuf(snd_pcm_t *handle, char *buf, long len, size_t *frames, size_t *max)
 {
 	long r;
@@ -384,7 +395,7 @@ long readbuf(snd_pcm_t *handle, char *buf, long len, size_t *frames, size_t *max
 	}
 	// showstat(handle, 0);
 	return r;
-}
+}*/
 
 long writebuf(snd_pcm_t *handle, char *buf, long len, size_t *frames)
 {
@@ -440,9 +451,9 @@ int main(int argc, char *argv[])
 {
 	struct option long_option[] =
 	{
-		{"help", 0, NULL, 'h'},		
+		{"help", 0, NULL, 'h'},
 		{"min", 1, NULL, 'm'},
-		{"max", 1, NULL, 'M'},		
+		{"max", 1, NULL, 'M'},
 		{"frames", 1, NULL, 'F'},
 		{"buffer", 1, NULL, 'B'},
 		{"period", 1, NULL, 'E'},
@@ -458,49 +469,8 @@ int main(int argc, char *argv[])
 	snd_timestamp_t p_tstamp, c_tstamp;
 	ssize_t r;
 	size_t frames_in, frames_out, in_max;
+	int effect = 0;
 	morehelp = 0;
-	
-		/*UDP*/
-	int sockfd, portno, n, serverlen;
-    struct sockaddr_in serveraddr;
-    struct hostent *server;
-    char *hostname;
-	//char buf[BUFSIZE];
-   // char *bufx[BUFSIZE];
-
-    //hostname = "192.168.10.11";
-	hostname = "192.168.10.11";
-    portno = 10000;
-
-    /* socket: create the socket */
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) 
-        error("ERROR opening socket");
-
-    /* gethostbyname: get the server's DNS entry */
-    server = gethostbyname(hostname);
-    if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host as %s\n", hostname);
-        exit(0);
-    }
-
-    /* build the server's Internet address */
-    bzero((char *) &serveraddr, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, 
-	  (char *)&serveraddr.sin_addr.s_addr, server->h_length);
-    serveraddr.sin_port = htons(portno);
-	
-	
-	/* writes all zeroes, empty it */
-  //  bzero(bufx, BUFSIZE);
-	
-	/* send the message to the server */
-	serverlen = sizeof(serveraddr);
-	/*UDP*/
-	
-	
-	
 	while (1) {
 		int c;
 		if ((c = getopt_long(argc, argv, "hP:C:m:M:F:f:c:r:B:E:s:bpn", long_option, NULL)) < 0)
@@ -555,23 +525,38 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+	
+int sockfd; /* socket */
+int portno; /* port to listen on */
+int clientlen; /* byte size of client's address */
+struct sockaddr_in serveraddr; /* server's addr */
+struct sockaddr_in clientaddr; /* client addr */
+struct hostent *hostp; /* client host info */
+char buf[BUFSIZE]; /* message buf */
+char *hostaddrp; /* dotted decimal host addr string */
+int optval; /* flag value for setsockopt */
+int n; /* message byte size */
+
+portno = 10000;
+
+	
+	
 	/* calculations */
 	loop_limit = loop_sec * rate;
 	latency = latency_min - 4;
 
 	/* allocate memory */
-	buffer = malloc((latency_max * snd_pcm_format_width(format) / 8) * 2); //(2048*4) = 8192
-	
-	
+	buffer = malloc((latency_max * snd_pcm_format_width(format) / 8) * 2);
+
 	/* ask for higher priority */
 	setscheduler();
 
 	/* list some info */
 	//printf("Playback device is %s\n", pdevice);
-	printf("Capture device is %s\n", cdevice);
-	printf("Parameters are %iHz, %s, %i channels, %s mode\n", rate, snd_pcm_format_name(format), channels, block ? "blocking" : "non-blocking");
-	printf("Poll mode: %s\n", use_poll ? "yes" : "no");
-	printf("Loop limit is %li frames, minimum latency = %i, maximum latency = %i\n", loop_limit, latency_min * 2, latency_max * 2);
+	//printf("Capture device is %s\n", cdevice);
+//	printf("Parameters are %iHz, %s, %i channels, %s mode\n", rate, snd_pcm_format_name(format), channels, block ? "blocking" : "non-blocking");
+//	printf("Poll mode: %s\n", use_poll ? "yes" : "no");
+//	printf("Loop limit is %li frames, minimum latency = %i, maximum latency = %i\n", loop_limit, latency_min * 2, latency_max * 2);
 
 	/* open playback device */
 	if ((err = snd_pcm_open(&phandle, pdevice, SND_PCM_STREAM_PLAYBACK, block ? 0 : SND_PCM_NONBLOCK)) < 0) {
@@ -584,23 +569,62 @@ int main(int argc, char *argv[])
 		printf("Record open error: %s\n", snd_strerror(err));
 		return 0;
 	}
+	
+			 /* 
+		   * socket: create the parent socket 
+		   */
+		  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+		  if (sockfd < 0) 
+			error("ERROR opening socket");
+
+		  /* setsockopt: Handy debugging trick that lets 
+		   * us rerun the server immediately after we kill it; 
+		   * otherwise we have to wait about 20 secs. 
+		   * Eliminates "ERROR on binding: Address already in use" error. 
+		   */
+		  optval = 1;
+		  setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, 
+				 (const void *)&optval , sizeof(int));
+
+		  /*
+		   * build the server's Internet address
+		   */
+		  bzero((char *) &serveraddr, sizeof(serveraddr));
+		  serveraddr.sin_family = AF_INET;
+		  serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+		  serveraddr.sin_port = htons((unsigned short)portno);
+
+		  /* 
+		   * bind: associate the parent socket with a port 
+		   */
+		  if (bind(sockfd, (struct sockaddr *) &serveraddr, 
+			   sizeof(serveraddr)) < 0) 
+			error("ERROR on binding");
+
+		  /* 
+		   * main loop: wait for a datagram, then echo it
+		   */
+		  clientlen = sizeof(clientaddr);
 
 	while(1) {
 		/* reset frame counters */
 		frames_in = frames_out = 0;
 
 		/* latency is passed and used as buffersize */
-		if (setparams(phandle, chandle, &latency) < 0)
+		/*if (setparams(phandle, chandle, &latency) < 0)
+			break;*/
+		
+		if (setparams(phandle, &latency) < 0)
 			break;
 
 		/* use bufsize to calculate / show latency */
-		showlatency(latency);
+	//	showlatency(latency);
 
 		/* link capture / playback handle - make sure they start/stop together */
-		if ((err = snd_pcm_link(chandle, phandle)) < 0) {
+	/*	if ((err = snd_pcm_link(chandle, phandle)) < 0) {
 			printf("Streams link error: %s\n", snd_strerror(err));
 			exit(0);
-		}
+		}*/
 
 		/* clean our buffer */
 		if (snd_pcm_format_set_silence(format, buffer, latency*channels) < 0) {
@@ -619,78 +643,128 @@ int main(int argc, char *argv[])
 		}
 
 		/* start capture - and, since it's linked - playback */
-		if ((err = snd_pcm_start(chandle)) < 0) {
+		if ((err = snd_pcm_start(phandle)) < 0) {
 			printf("Go error: %s\n", snd_strerror(err));
 			exit(0);
 		}
 
 		/* get timestamp when the devices started */
-		gettimestamp(phandle, &p_tstamp);
+/*		gettimestamp(phandle, &p_tstamp);
 		gettimestamp(chandle, &c_tstamp);
 #if 0
-	//	printf("Playback:\n");
-	//	showstat(phandle, frames_out);
-		//printf("Capture:\n");
-	//	showstat(chandle, frames_in);
-#endif
-
-
-
-
+		printf("Playback:\n");
+		showstat(phandle, frames_out);
+		printf("Capture:\n");
+		showstat(chandle, frames_in);
+#endif*/
 
 		ok = 1;
 		in_max = 0;
-		int my_counter = 0;
-	//	start = clock();
+ 
+	    start = clock();
 		while (ok && frames_in < loop_limit) {
 			if (use_poll) {
 				/* use poll to wait for next event */
-				snd_pcm_wait(chandle, 1000);
-			}
-			if ((r = readbuf(chandle, buffer, latency, &frames_in, &in_max)) < 0)
-			{
-					ok = 0;		
+				snd_pcm_wait(phandle, 1000);
 			}
 			
-			else {
-			      printf("\n r= %d \n",r);
-			      if (writebuf(phandle, buffer, r, &frames_out) < 0)
+			/*if ((r = readbuf(chandle, buffer, latency, &frames_in, &in_max)) < 0)*/
+
+			//if ((n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen)) < 0)
+		//	{
+				//ok = 0;
+		      //  error("ERROR in recvfrom");
+			//}
+			
+			//else {
+				
+			/*	n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen);
+				printf("framesout: %d \n", n);
+				
+				memcpy(buffer, buf, 4);*/
+				
+			 //	if (writebuf(phandle, buffer, strlen(buf), &frames_out) < 0
+			/*    writebuf(phandle, buffer, strlen(buf), &frames_out);
+				printf("framesout: %d \n", *buffer);
+				printf("strlen(buf): %d \n", strlen(buffer));*/
+				//{
+			    //    ok = 0;   
+			   // }
+				
+				
+			  //printf("framesout: 0x%08X \n", *buffer);
+			  //printf("strlen(buf): %d \n", strlen(buffer));
+			  //printf("server received %d/%d bytes: %s\n", strlen(buf), n, buf);
+		      //printf("server received %zu/%d bytes: %s\n", strlen(buf), n, buf);
+				
+			//}
+			
+			
+			   /*
+			
+				if((n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen)) < 0)
+				{
+					ok = 0;
+				}
+				
+				printf("\n n =%d \n", n);
+	               printf("\nbuffer value: 0x%04X, %d", *buf, sizeof(buf));
+
+
+				if (n < 0)
+				  error("ERROR in recvfrom");
+				*/
+				/*else
+				{
+					 if (writebuf(phandle, buf, n, &frames_out) < 0)
+					  {
+						ok = 0;
+					  }
+				  }*/
+				  
+			/*	
+		if(n = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *) &clientaddr, &clientlen)<0)
+		{
+			printf("\n n =%d \n", n);	
+		}	*/
+		
+		n = recvfrom(sockfd, buffer, 128, 0, (struct sockaddr *) &clientaddr, &clientlen);
+		//printf("\n n =%d \n", n);	
+		
+		
+	
+			   // counter = counter+1;
+				//printf("\n counter =%d \n", counter);	
+				
+				
+				
+				   if (writebuf(phandle, buffer, 128, &frames_out) < 0)
 				  {
 					ok = 0;
 				  }
-				  
-				  if (sendto(sockfd, buffer, r, 0, (struct sockaddr*)&serveraddr, serverlen) < 0) 
-					{
-						 error("ERROR in sendto");
-						 ok = 0;
-						 
-					}
-					my_counter = my_counter+1;
-				    printf("\nmy_counter = %d \n",my_counter);
-					printf("\nbuffer value: 0x%04X, %d", *buffer, sizeof(buffer));
-				   
-					//memcpy(buf, &frames_out, 4);
-					//memcpy(buf, buffer, 4);
-					//memcpy(bufx, buffer, 4);	
-					//n = sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr*)&serveraddr, serverlen);
-                     
-					//if (sendto(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&serveraddr, serverlen) < 0) 
+				 end = clock();
+					cpu_time_used = (((double) (end - start)) / CLOCKS_PER_SEC)*1000;
+					printf("\ncpu_time_used: %f ms \n", cpu_time_used);
 				
-					/*
-					printf("framesout (dec): %d \n", bufx);
-					printf("framesout: 0x%02X \n", bufx);
-					printf("strlen(buf): %d \n", strlen(bufx));*/
+				
+				exit(0);
+				
+               /* frames = snd_pcm_writei(phandle, buffer, 128);
+                if (frames < 0)
+                        frames = snd_pcm_recover(phandle, frames, 0);
+                if (frames < 0) {
+                        printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
+                        break;
+                }
+                if (frames > 0 && frames < (long)sizeof(buffer))
+                        printf("Short write (expected %li, wrote %li)\n", (long)sizeof(buffer), frames);
+*/
 
-			 	//if (writebuf(phandle, buffer, r, &frames_out) < 0)
-					//ok = 0;
-			}
 		}
 
-		//end = clock();
-		//cpu_time_used = (((double) (end - start)) / CLOCKS_PER_SEC)*1000;
-//printf("\ncpu_time_used (RTT): %f ms \n", cpu_time_used);
-
+	
 		
+
 		if (ok)
 			printf("Success\n");
 		else
@@ -699,15 +773,15 @@ int main(int argc, char *argv[])
 		//showstat(phandle, frames_out);
 		//printf("Capture:\n");
 		//showstat(chandle, frames_in);
-		showinmax(in_max);
-		if (p_tstamp.tv_sec == p_tstamp.tv_sec &&
+		//showinmax(in_max);
+	/*	if (p_tstamp.tv_sec == p_tstamp.tv_sec &&
 		    p_tstamp.tv_usec == c_tstamp.tv_usec)
-			printf("Hardware sync\n");
-		snd_pcm_drop(chandle);
+			printf("Hardware sync\n");*/
+		//snd_pcm_drop(chandle);
 		snd_pcm_nonblock(phandle, 0);
 		snd_pcm_drain(phandle);
 		snd_pcm_nonblock(phandle, !block ? 1 : 0);
-		if (ok) {
+	/*	if (ok) {
 #if 1
 			printf("Playback time = %li.%i, Record time = %li.%i, diff = %li\n",
 			       p_tstamp.tv_sec,
@@ -717,12 +791,16 @@ int main(int argc, char *argv[])
 			       timediff(p_tstamp, c_tstamp));
 #endif
 			break;
-		}
-		snd_pcm_unlink(chandle);
+		}*/
+		//snd_pcm_unlink(chandle);
 		snd_pcm_hw_free(phandle);
-		snd_pcm_hw_free(chandle);
+	//	snd_pcm_hw_free(chandle);
 	}
+
+	
+	
+	
 	snd_pcm_close(phandle);
-	snd_pcm_close(chandle);
+//	snd_pcm_close(chandle);
 	return 0;
 }

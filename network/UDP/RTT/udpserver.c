@@ -14,9 +14,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-//#define BUFSIZE 5
+#define BUFSIZE 5
 //#define BUFSIZE 512
-#define BUFSIZE 1024
+//#define BUFSIZE 1024
 
 clock_t start, end;
 double cpu_time_used;
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
     /* 
      * sendto: echo the input back to the client 
      */
-    n = sendto(sockfd, buf, sizeof(buf), 0, (struct sockaddr *) &clientaddr, clientlen);
+    n = sendto(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, clientlen);
     if (n < 0) 
       error("ERROR in sendto");
   }

@@ -15,9 +15,9 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 
-//#define BUFSIZE 5
+#define BUFSIZE 5
 //#define BUFSIZE 512
-#define BUFSIZE 1024
+//#define BUFSIZE 1024
 
 clock_t start, end;
 double cpu_time_used;
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 	srand(time(NULL));
 	for (i=0; i < sizeof(buf); i++) {
 		buf[i] = ((rand() % 100)+1);
-		printf("%u", buf[i]);
+		//printf("%u", buf[i]);
 	}
 
 
@@ -80,14 +80,14 @@ int main(int argc, char **argv) {
 
     start = clock();
 //    n = sendto(sockfd, buf, strlen(buf), 0, &serveraddr, serverlen);
-    n = sendto(sockfd, buf, sizeof(buf), 0, (struct sockaddr*)&serveraddr, serverlen);
+    n = sendto(sockfd, buf, BUFSIZE, 0, (struct sockaddr*)&serveraddr, serverlen);
 
     if (n < 0) 
       error("ERROR in sendto");
     
     /* print the server's reply */
 //    n = recvfrom(sockfd, buf, strlen(buf), 0, &serveraddr, &serverlen);
-    n = recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr*)&serveraddr, &serverlen);
+    n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr*)&serveraddr, &serverlen);
     if (n < 0) 
       error("ERROR in recvfrom");
 	

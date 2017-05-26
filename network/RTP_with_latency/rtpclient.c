@@ -64,8 +64,7 @@ int main(int argc, char **argv) {
 	14 bytes Ethernet
      20 bytes IP
      8 bytes UDP  (42 bytes)
-		
-	
+			
 	First 4 octets
 	v = 2 bit
 	p = 1 bit
@@ -100,9 +99,9 @@ int main(int argc, char **argv) {
 	int i, a;
 	printf("\n Random data:\n");
 	srand(time(NULL));
-	for (i=12; i < BUFSIZE; i++) {
+	for (i=12; i < sizeof(buf); i++) {
 		buf[i] = ((rand() % 100)+1);
-		//printf("%u", buf[i]);
+		printf("%u", buf[i]);
 	}
 	
 	/* send the message to the server */
@@ -110,8 +109,7 @@ int main(int argc, char **argv) {
 
 	// RTT measurement calculation start
     start = clock();
-	//n = sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr*)&serveraddr, serverlen);
-     n = sendto(sockfd, buf, BUFSIZE, 0, (struct sockaddr*)&serveraddr, serverlen);
+     n = sendto(sockfd, buf, sizeof(buf), 0, (struct sockaddr*)&serveraddr, serverlen);
     //printf("sizeof of buf %lu \n", sizeof(buf));
 
     if (n < 0) 
@@ -119,7 +117,7 @@ int main(int argc, char **argv) {
     
     /* print the server's reply */
     //n = recvfrom(sockfd, buf, strlen(buf), 0, (struct sockaddr*)&serveraddr, &serverlen);
-	n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr*)&serveraddr, &serverlen);
+	n = recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr*)&serveraddr, &serverlen);
 
     if (n < 0) 
       error("ERROR in recvfrom");

@@ -71,11 +71,11 @@ int main(int argc, char **argv) {
 	srand(time(NULL));
 	for (i=0; i < sizeof(buf); i++) {
 		buf[i] = ((rand() % 100)+1);
-		printf("%u", buf[i]);
+		//printf("%u", buf[i]);
 	}
 	
     /* send the message line to the server */
-    n = write(sockfd, buf, sizeof(buf));
+    n = write(sockfd, buf, BUFSIZE);
     if (n < 0) 
       error("ERROR writing to socket");
 

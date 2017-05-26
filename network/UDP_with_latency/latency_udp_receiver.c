@@ -655,7 +655,7 @@ portno = 10000;
 
 		ok = 1;
 		in_max = 0;
- bzero(buf, 8);
+ 
 	
 		while (ok && frames_in < loop_limit) {
 			if (use_poll) {
@@ -700,12 +700,10 @@ portno = 10000;
 				if((n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen)) < 0)
 				{
 					ok = 0;
-					
-					
 				}
 				
-				  printf("\n n =%d \n", n);
-	              printf("\nbuffer value: 0x%04X, %d", *buf, sizeof(buf));
+				printf("\n n =%d \n", n);
+	               printf("\nbuffer value: 0x%04X, %d", *buf, sizeof(buf));
 
 
 				if (n < 0)
@@ -732,7 +730,19 @@ portno = 10000;
 	
 			   // counter = counter+1;
 				//printf("\n counter =%d \n", counter);	
-                frames = snd_pcm_writei(phandle, buffer, 128);
+				
+				
+				
+				   if (writebuf(phandle, buffer, 128, &frames_out) < 0)
+				  {
+					ok = 0;
+				  }
+				
+				
+				
+				
+				
+               /* frames = snd_pcm_writei(phandle, buffer, 128);
                 if (frames < 0)
                         frames = snd_pcm_recover(phandle, frames, 0);
                 if (frames < 0) {
@@ -741,7 +751,7 @@ portno = 10000;
                 }
                 if (frames > 0 && frames < (long)sizeof(buffer))
                         printf("Short write (expected %li, wrote %li)\n", (long)sizeof(buffer), frames);
-
+*/
 
 		}
 
