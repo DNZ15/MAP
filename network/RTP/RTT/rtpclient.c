@@ -64,7 +64,6 @@ int main(int argc, char **argv) {
 	14 bytes Ethernet
      20 bytes IP
      8 bytes UDP  (42 bytes)
-		
 	
 	First 4 octets
 	v = 2 bit

@@ -23,13 +23,13 @@
 char *pdevice = "hw:0,0";
 char *cdevice = "hw:0,0";
 snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
-int rate = 44100;
+int rate = 48000;
 int channels = 2;
 int buffer_size = 0;		/* auto */
 int period_size = 0;		/* auto */
 int latency_min = 32;		/* in frames / 2 */
 int latency_max = 2048;		/* in frames / 2 */
-int loop_sec = 30;		/* seconds */
+int loop_sec = 10;		/* seconds */
 int block = 0;			/* block mode */
 int use_poll = 0;
 int resample = 1;
@@ -39,13 +39,8 @@ snd_output_t *output = NULL;
 
 #define BUFSIZE 1024
 
-snd_pcm_sframes_t frames;
-int counter=0;
-
-clock_t start, end;
-double cpu_time_used;
-
-
+        snd_pcm_sframes_t frames;
+		int counter=0;
 /*
  * error - wrapper for perror
  */
@@ -661,7 +656,7 @@ portno = 10000;
 		ok = 1;
 		in_max = 0;
  
-	    start = clock();
+	
 		while (ok && frames_in < loop_limit) {
 			if (use_poll) {
 				/* use poll to wait for next event */
@@ -738,16 +733,14 @@ portno = 10000;
 				
 				
 				
-				   if (writebuf(phandle, buffer, 128, &frames_out) < 0)
+				   if (writebuf(phandle, (buffer+12), 128, &frames_out) < 0)
 				  {
 					ok = 0;
 				  }
-				 end = clock();
-					cpu_time_used = (((double) (end - start)) / CLOCKS_PER_SEC)*1000;
-					printf("\ncpu_time_used: %f ms \n", cpu_time_used);
 				
 				
-				exit(0);
+				
+				
 				
                /* frames = snd_pcm_writei(phandle, buffer, 128);
                 if (frames < 0)
@@ -796,10 +789,6 @@ portno = 10000;
 		snd_pcm_hw_free(phandle);
 	//	snd_pcm_hw_free(chandle);
 	}
-
-	
-	
-	
 	snd_pcm_close(phandle);
 //	snd_pcm_close(chandle);
 	return 0;

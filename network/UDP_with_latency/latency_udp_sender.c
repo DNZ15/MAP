@@ -24,7 +24,7 @@ double cpu_time_used;
 char *pdevice = "hw:0,0";
 char *cdevice = "hw:0,0";
 snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
-int rate = 44100;
+int rate = 48000;
 int channels = 2;
 int latency_min = 32;		/* in frames / 2 */
 int latency_max = 2048;		/* in frames / 2 */

@@ -20,11 +20,12 @@
 clock_t start, end;
 double cpu_time_used;
 
+unsigned char buf2[12];
 
 char *pdevice = "hw:0,0";
 char *cdevice = "hw:0,0";
 snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
-int rate = 44100;
+int rate = 48000;
 int channels = 2;
 int latency_min = 32;		/* in frames / 2 */
 int latency_max = 2048;		/* in frames / 2 */
@@ -34,6 +35,8 @@ int resample = 1;
 unsigned long loop_limit;
 
 snd_output_t *output = NULL;
+
+
 
 
 /* 
@@ -360,6 +363,7 @@ long readbuf(snd_pcm_t *handle, char *buf, long len, size_t *frames, size_t *max
 
 	if (!block) {
 		do {
+			strncpy(buf, buf2, 12);
 			r = snd_pcm_readi(handle, buf, len);
 		} while (r == -EAGAIN);
 		if (r > 0) {
@@ -499,7 +503,44 @@ int main(int argc, char *argv[])
 	serverlen = sizeof(serveraddr);
 	/*UDP*/
 	
+			/*
+	14 bytes Ethernet + 20 bytes IP + 12 bytes RTP  (46 bytes)
 	
+	PT (dec) 10 = Linear PCM 16-bit Stereo audio 1411.2 kbit/s,[2][3][4] uncompressed
+	PT (dec) 11 = Linear PCM 16-bit audio 705.6 kbit/s, uncompressed
+	*/
+	
+    //0x800A0001; // wireshark turns it, so becomes => 0x01000A80; 
+	//time_stamp = 0 => buf[4-7] = 0
+	//ssrc = 0 => buf[8-11] = 0
+/*
+	    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                           timestamp                           |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |           synchronization source (SSRC) identifier            |
+   +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+   |            contributing source (CSRC) identifiers             |
+   |                             ....                              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+   
+//12 bytes
+buf2[0] = 1;  // sequence number
+buf2[1] = 0;  // sequence number
+buf2[2] = 10; // PT + M, M = 0
+buf2[3] = 128;//v, p, x, cc , v = 2 (dec), rest is 0
+buf2[4] = 0;  // timestamp
+buf2[5] = 0;  // timestamp
+buf2[6] = 0;  // timestamp
+buf2[7] = 0;  // timestamp
+buf2[8] = 0;  //ssrc
+buf2[9] = 0;  //ssrc
+buf2[10] = 0; //ssrc
+buf2[11] = 0; //ssrc
 	
 	while (1) {
 		int c;
@@ -642,13 +683,11 @@ int main(int argc, char *argv[])
 		in_max = 0;
 		int my_counter = 0;
 	//	start = clock();
-	start = clock();
 		while (ok && frames_in < loop_limit) {
 			if (use_poll) {
 				/* use poll to wait for next event */
 				snd_pcm_wait(chandle, 1000);
 			}
-			
 			if ((r = readbuf(chandle, buffer, latency, &frames_in, &in_max)) < 0)
 			{
 					ok = 0;		
@@ -667,14 +706,9 @@ int main(int argc, char *argv[])
 						 ok = 0;
 						 
 					}
-							end = clock();
-					cpu_time_used = (((double) (end - start)) / CLOCKS_PER_SEC)*1000;
-					printf("\ncpu_time_used: %f ms \n", cpu_time_used);
-					
-					exit(0);
-					/*my_counter = my_counter+1;
+					my_counter = my_counter+1;
 				    printf("\nmy_counter = %d \n",my_counter);
-					printf("\nbuffer value: 0x%04X, %d", *buffer, sizeof(buffer));*/
+					printf("\nbuffer value: 0x%04X, %d", *buffer, sizeof(buffer));
 				   
 					//memcpy(buf, &frames_out, 4);
 					//memcpy(buf, buffer, 4);
@@ -692,7 +726,6 @@ int main(int argc, char *argv[])
 					//ok = 0;
 			}
 		}
-
 
 		//end = clock();
 		//cpu_time_used = (((double) (end - start)) / CLOCKS_PER_SEC)*1000;

@@ -23,7 +23,7 @@
 char *pdevice = "hw:0,0";
 char *cdevice = "hw:0,0";
 snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE;
-int rate = 44100;
+int rate = 48000;
 int channels = 2;
 int buffer_size = 0;		/* auto */
 int period_size = 0;		/* auto */
